@@ -1,0 +1,47 @@
+name: Sync upstream
+
+"on":
+  schedule:
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Merge upstream main
+        id: merge
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote add upstream https://github.com/shuaiplus/nodewarden.git
+          git fetch upstream main
+          BEFORE=$(git rev-parse HEAD)
+          echo "before=$BEFORE" >> "$GITHUB_OUTPUT"
+          if git merge --no-edit upstream/main; then
+            echo "merged=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Merge conflict with upstream. Manual resolution needed; nothing was pushed."
+            git merge --abort
+            exit 1
+          fi
+          AFTER=$(git rev-parse HEAD)
+          echo "after=$AFTER" >> "$GITHUB_OUTPUT"
+          if [ "$BEFORE" != "$AFTER" ]; then
+            git push origin main
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Trigger deploy
+        if: steps.merge.outputs.changed == 'true'
+        run: gh workflow run deploy.yml --ref main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
