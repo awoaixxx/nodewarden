@@ -1,8 +1,10 @@
 name: Deploy to Cloudflare Workers
 
+# Manual only. Push deploys are handled by the Cloudflare Workers Git
+# integration (connected to this repo in the Cloudflare dashboard).
+# Run this by hand only after CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID
+# secrets have been added to the repo.
 "on":
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
